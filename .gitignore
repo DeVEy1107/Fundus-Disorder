@@ -2,6 +2,7 @@ data
 doc
 log
 lib
+config
 
 pretrained
 
