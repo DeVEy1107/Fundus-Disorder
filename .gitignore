@@ -1,6 +1,9 @@
 data
 doc
 log
+lib
+
+pretrained
 
 __pycache__
 *.pyc
