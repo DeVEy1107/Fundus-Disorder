@@ -9,3 +9,11 @@ pydicom
 gdcm
 pylibjpeg
 pylibjpeg-libjpeg
+
+Pillow
+pycm
+scikit-learn
+timm
+scikit-multilearn
+huggingface-hub
+tensorboard
