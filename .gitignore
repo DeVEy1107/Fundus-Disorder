@@ -1,3 +1,6 @@
 data
 doc
 log
+
+__pycache__
+*.pyc
