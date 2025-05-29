@@ -2,9 +2,11 @@ data
 doc
 log
 lib
+res
 config
-
 pretrained
+
+.vscode
 
 __pycache__
 *.pyc
