@@ -63,7 +63,7 @@ def find_fundus_circle(img):
 
     if circles is None:
         print("No circles found in the image.")
-        return img
+        return w // 2, h // 2, min(w, h) // 2
 
     circles = np.uint16(np.around(circles))
     x, y, r = circles[0][0]  # Get the first detected circle
@@ -89,6 +89,11 @@ def crop_fundus_image(img, x, y, r):
         img = cv2.copyMakeBorder(
             img, pad_top, pad_bottom, pad_left, pad_right, cv2.BORDER_CONSTANT, value=0
         )
+
+    x1 = max(0, x1 + pad_left)
+    x2 = min(img.shape[1], x2 + pad_left)
+    y1 = max(0, y1 + pad_top)
+    y2 = min(img.shape[0], y2 + pad_top)
 
     return img[y1:y2, x1:x2]
     
