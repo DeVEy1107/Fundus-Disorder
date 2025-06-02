@@ -1,4 +1,5 @@
 doc
+data
 lib
 res
 config
@@ -8,7 +9,3 @@ pretrained
 
 __pycache__
 *.pyc
-
-!data/
-data/*
-!data/*.json
