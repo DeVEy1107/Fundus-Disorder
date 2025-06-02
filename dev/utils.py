@@ -108,11 +108,11 @@ def crop_image(image, margin=0.1):
     y0, y1 = y.min(), y.max()
     cx, cy = (x0 + x1) // 2, (y0 + y1) // 2
 
-    dx, dy = (x1 - x0) // 2, (y1 - y0) // 2
-    d = max(dx, dy)
-    d = int(d * (1 + margin))  
-    x0, x1 = cx - d, cx + d
-    y0, y1 = cy - d, cy + d
+    rx, ry = (x1 - x0) // 2, (y1 - y0) // 2
+    r = max(rx, ry)
+    r = int(r * (1 + margin))  
+    x0, x1 = cx - r, cx + r
+    y0, y1 = cy - r, cy + r
     bbox = (x0, x1, y0, y1)
 
     return image[x0:x1, y0:y1], bbox
