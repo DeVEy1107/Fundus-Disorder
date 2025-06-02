@@ -96,7 +96,27 @@ def crop_fundus_image(img, x, y, r):
     y2 = min(img.shape[0], y2 + pad_top)
 
     return img[y1:y2, x1:x2]
+
+
+def crop_image(image, margin=0.1):
+    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    binary = cv2.threshold(gray, 10, 255, cv2.THRESH_BINARY)[1]
+
+    x, y = np.where(binary > 0)
     
+    x0, x1 = x.min(), x.max()
+    y0, y1 = y.min(), y.max()
+    cx, cy = (x0 + x1) // 2, (y0 + y1) // 2
+
+    dx, dy = (x1 - x0) // 2, (y1 - y0) // 2
+    d = max(dx, dy)
+    d = int(d * (1 + margin))  
+    x0, x1 = cx - d, cx + d
+    y0, y1 = cy - d, cy + d
+    bbox = (x0, x1, y0, y1)
+
+    return image[x0:x1, y0:y1], bbox
+
 
 
 if __name__ == "__main__":
