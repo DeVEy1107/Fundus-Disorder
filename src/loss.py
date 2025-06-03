@@ -226,3 +226,50 @@ class MaskRCNNLoss(nn.Module):
         regression_targets = torch.zeros_like(rpn_bbox_pred)
         
         return F.smooth_l1_loss(rpn_bbox_pred, regression_targets, reduction='mean')
+
+
+# Example usage
+def example_usage():
+    """Example of how to use the MaskRCNNLoss"""
+    
+    # Initialize loss function
+    loss_fn = MaskRCNNLoss()
+    
+    # Example predictions (batch_size=2, num_classes=81, etc.)
+    predictions = {
+        'cls_logits': torch.randn(10, 81),  # 10 ROIs, 81 classes (COCO)
+        'bbox_regression': torch.randn(10, 81*4),  # Bbox regression for each class
+        'mask_logits': torch.randn(10, 81, 28, 28),  # Mask predictions
+        'objectness': torch.randn(100, 1),  # RPN objectness scores
+        'rpn_bbox_regression': torch.randn(100, 4),  # RPN bbox regression
+    }
+    
+    # Example targets
+    targets = [
+        {
+            'boxes': torch.tensor([[10, 10, 50, 50], [60, 60, 100, 100]], dtype=torch.float32),
+            'labels': torch.tensor([1, 2], dtype=torch.long),
+            'masks': torch.randint(0, 2, (2, 28, 28), dtype=torch.float32)
+        },
+        {
+            'boxes': torch.tensor([[20, 20, 80, 80]], dtype=torch.float32),
+            'labels': torch.tensor([3], dtype=torch.long),
+            'masks': torch.randint(0, 2, (1, 28, 28), dtype=torch.float32)
+        }
+    ]
+    
+    # Compute losses
+    losses = loss_fn(predictions, targets)
+    
+    # Total loss
+    total_loss = sum(losses.values())
+    
+    print("Individual losses:")
+    for name, loss in losses.items():
+        print(f"  {name}: {loss.item():.4f}")
+    print(f"Total loss: {total_loss.item():.4f}")
+    
+    return total_loss
+
+if __name__ == "__main__":
+    example_usage()
