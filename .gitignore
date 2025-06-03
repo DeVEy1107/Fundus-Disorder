@@ -1,5 +1,4 @@
 doc
-data
 lib
 res
 config
@@ -9,3 +8,10 @@ pretrained
 
 __pycache__
 *.pyc
+
+
+!data
+data/*
+!data/retinal-tiff
+data/retinal-tiff/*
+!data/retinal-tiff/*.json
