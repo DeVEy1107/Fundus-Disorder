@@ -1,12 +1,20 @@
 import json
 import os
 from typing import List, Dict, Any
-from cvt_COCO import convert_to_coco_format
+from data_utils import convert_to_coco_format
 
-def load_original_annotations(annotations_path: str) -> List[Dict[str, Any]]:
+def load_original_annotations(root_dir: str) -> List[Dict[str, Any]]:
     """Load the original annotations JSON file."""
-    with open(annotations_path, 'r') as f:
-        return json.load(f)
+    ids = [f.split(".dcm")[0] for f in os.listdir(root_dir) if f.endswith('.dcm')]
+    json_filenames = [os.path.join(root_dir, f"{id}.json") for id in ids]
+
+    input_data = []
+    for json_file in json_filenames:
+        with open(json_file, 'r') as f:
+            data = json.load(f)
+        if data is not None:
+            input_data.append(data)
+    return input_data
 
 def load_stratified_folds(folds_path: str) -> List[Dict[str, Any]]:
     """Load the stratified folds JSON file."""
@@ -17,7 +25,7 @@ def filter_annotations_by_ids(annotations: List[Dict[str, Any]],
                              image_ids: List[str]) -> List[Dict[str, Any]]:
     """Filter annotations to only include specified image IDs."""
     id_set = set(image_ids)
-    return [ann for ann in annotations if ann.get('id') in id_set]
+    return [ann for ann in annotations if ann['imagePath'].split(".dcm")[0] in id_set]
 
 def create_split_files(annotations_path: str, 
                       folds_path: str, 
@@ -72,22 +80,19 @@ def create_split_files(annotations_path: str,
     
     # Convert each split to COCO format
     print("\nConverting to COCO format...")
-    
+
     train_coco = convert_to_coco_format(
         train_annotations, 
-        f"Training Dataset - Fold {fold_number}", 
         f"Training split from fold {fold_number}"
     )
     
     val_coco = convert_to_coco_format(
         val_annotations, 
-        f"Validation Dataset - Fold {fold_number}", 
         f"Validation split from fold {fold_number}"
     )
     
     test_coco = convert_to_coco_format(
         test_annotations, 
-        f"Test Dataset - Fold {fold_number}", 
         f"Test split from fold {fold_number}"
     )
     
@@ -206,9 +211,9 @@ def verify_splits(output_dir: str = "splits", fold_number: int = 1):
 
 if __name__ == "__main__":
     # Configuration
-    ANNOTATIONS_PATH = "data/retinal-tiff/annotations.json"  # Path to your original annotations file
+    ANNOTATIONS_PATH = "data/retinal-combined"  # Path to your original annotations file
     FOLDS_PATH = "data/retinal-tiff/stratified_ids.json"     # Path to your stratified folds file
-    OUTPUT_DIR = "splits"                  # Directory to save split files
+    OUTPUT_DIR = "splits2"                  # Directory to save split files
     
     # Example usage - create splits for fold 1
     print("Creating splits for fold 1...")
