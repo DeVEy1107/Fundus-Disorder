@@ -31,10 +31,8 @@ def read_json_file(file_path: str = None) -> dict:
 
 
 
-
 def convert_to_coco_format(
     input_data, 
-    dataset_name: str = "Custom Dataset",
     description: str = "Converted dataset"
 ):
 
@@ -153,7 +151,7 @@ def test_COCO_convert():
         data = read_json_file(json_file)
         if data is not None:
             input_data.append(data)
-    coco_data = convert_to_coco_format(input_data, dataset_name="Retinal Dataset", description="Fundus Disorder Dataset")
+    coco_data = convert_to_coco_format(input_data, description="Fundus Disorder Dataset")
     coco_output_file = "coco_format.json"
     with open(coco_output_file, 'w') as f:
         json.dump(coco_data, f, indent=4)
