@@ -14,3 +14,7 @@ data/*
 !data/retinal-tiff
 data/retinal-tiff/*
 !data/retinal-tiff/*.json
+
+checkpoints
+results
+results-01
