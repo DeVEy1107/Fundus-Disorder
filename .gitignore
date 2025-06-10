@@ -2,6 +2,7 @@ lib
 res
 config
 pretrained
+tmp
 
 .vscode
 
@@ -16,5 +17,3 @@ data/retinal-tiff/*
 !data/retinal-tiff/*.json
 
 checkpoints
-results
-results-01
