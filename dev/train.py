@@ -134,14 +134,17 @@ def main():
             json_file=config['train_json'],
             img_dir=config['img_dir'],
             load_masks=False,  # Faster R-CNN doesn't need masks for detection
-            img_size=config['img_size']
+            img_size=config['img_size'],
+            augmentation=True,  # TODO: Add augmentation if needed
+            clahe=True  # TODO: Add CLAHE if needed
         )
         
         val_dataset = RetinalDataset(
             json_file=config['val_json'],
             img_dir=config['img_dir'],
             load_masks=False,
-            img_size=config['img_size']
+            img_size=config['img_size'],
+            clahe=True  # TODO: Add CLAHE if needed
         )
 
         print(f"Train dataset size: {len(train_dataset)}")
@@ -197,6 +200,7 @@ def main():
     train_losses = []
     val_losses = []
     best_val_loss = float('inf')
+    best_mAP = 0.0
     
     print(f"\nStarting training for {config['num_epochs']} epochs...")
     print("=" * 60)
@@ -238,7 +242,9 @@ def main():
         print(f"  Epoch Time: {epoch_time:.1f}s")
         
         # Save best model
-        if val_loss < best_val_loss:
+        # if val_loss < best_val_loss:
+        if mAP_results > best_mAP: # TODO: Change to mAP
+            best_mAP = mAP_results
             best_val_loss = val_loss
             save_checkpoint(
                 model, optimizer, scheduler, epoch, val_loss, 
