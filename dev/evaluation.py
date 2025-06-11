@@ -15,6 +15,10 @@ def calculate_map(predictions, targets, iou_threshold=0.5):
         mAP score
     """
     
+    # conver predictions and targets to CPU tensors if they are not already
+    predictions = [{k: v.cpu() for k, v in pred.items()} for pred in predictions]
+    targets = [{k: v.cpu() for k, v in target.items()} for target in targets]
+
     # Get unique classes
     all_classes = set()
     for target in targets:
@@ -84,7 +88,7 @@ def calculate_ap_for_class(predictions, targets, iou_threshold):
     
     if len(all_pred_boxes) == 0:
         return 0.0
-    
+
     # Concatenate all predictions
     all_pred_boxes = torch.cat(all_pred_boxes, dim=0)
     all_pred_scores = torch.cat(all_pred_scores, dim=0)
@@ -146,3 +150,25 @@ def calculate_ap_for_class(predictions, targets, iou_threshold):
         ap += p / 11
     
     return ap.item()
+
+
+if __name__ == "__main__":
+
+    # Create dummy data for testing
+    predictions = [
+        {'boxes': torch.tensor([[10, 10, 50, 50], [20, 20, 60, 60]]), 'scores': torch.tensor([0.9, 0.8]), 'labels': torch.tensor([1, 2])},
+        {'boxes': torch.tensor([[15, 15, 55, 55]]), 'scores': torch.tensor([0.85]), 'labels': torch.tensor([1])}
+    ]
+
+    targets = [
+        {'boxes': torch.tensor([[10, 10, 50, 50], [30, 30, 70, 70]]), 'labels': torch.tensor([1, 2])},
+        {'boxes': torch.tensor([[20, 20, 60, 60]]), 'labels': torch.tensor([1])}
+    ]
+
+    # Convert to CPU tensors if necessary
+    predictions = [{k: v.cpu() for k, v in pred.items()} for pred in predictions]
+    targets = [{k: v.cpu() for k, v in target.items()} for target in targets]
+
+    iou_threshold = 0.5
+    mAP = calculate_map(predictions, targets, iou_threshold)
+    print(f"Mean Average Precision (mAP): {mAP:.4f}")
