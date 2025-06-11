@@ -14,6 +14,7 @@ from model import get_faster_rcnn_model, get_retinanet_model
 from optim import get_adam, get_step_lr_scheduler
 from torchvision.ops import box_iou
 
+from config import parse_args
 from utils import save_checkpoint, load_checkpoint
 from evaluation import calculate_map
 from visual import plot_training_curves
@@ -108,28 +109,9 @@ def evaluate(model, data_loader, device):
 
 
 def main():
-    # Configuration
-    config = {
-        'data_dir': "C:/Users/B093022035/Desktop/Fundus-Disorder/data/retinal-tiff",
-        'img_dir': "C:/Users/B093022035/Desktop/Fundus-Disorder/data/retinal-tiff/images",
-        'train_json': "splits/train_fold_1.json",
-        'val_json': "splits/val_fold_1.json", 
-        'test_json': "splits/test_fold_1.json",
-        'num_classes': 12,  # 11 classes + background
-        'batch_size': 2,   # Reduced for TIFF images which are typically large
-        'num_workers': 2,  # Reduced for stability
-        'num_epochs': 50,
-        'learning_rate': 0.001,
-        'weight_decay': 0.0005,
-        'step_size': 15,   # LR decay every 15 epochs
-        'gamma': 0.1,      # LR decay factor
-        'img_size': (512, 512),  # Resize images for faster training
-        'save_dir': 'checkpoints',
-        'print_freq': 5,
-        'save_freq': 10,   # Save checkpoint every 10 epochs
-        'resume_checkpoint': None  # Path to checkpoint to resume from
-    }
     
+    config = parse_args()
+
     print("=" * 60)
     print("FASTER R-CNN TRAINING PIPELINE")
     print("=" * 60)
@@ -162,18 +144,9 @@ def main():
             load_masks=False,
             img_size=config['img_size']
         )
-        
-        test_dataset = RetinalDataset(
-            json_file=config['test_json'],
-            img_dir=config['img_dir'],
-            load_masks=False,
-            img_size=config['img_size']
-        )
-        
+
         print(f"Train dataset size: {len(train_dataset)}")
         print(f"Validation dataset size: {len(val_dataset)}")
-        print(f"Test dataset size: {len(test_dataset)}")
-        
     except Exception as e:
         print(f"Error creating datasets: {e}")
         print("Please check that the JSON files and image directory exist.")
@@ -201,8 +174,14 @@ def main():
     
     # Create model
     print(f"\nCreating Faster R-CNN model with {config['num_classes']} classes...")
-    model = get_faster_rcnn_model(config['num_classes'])
-    # model = get_retinanet_model(config['num_classes'])
+    if config['model_name'] == 'frcnn':
+        model = get_faster_rcnn_model(config['num_classes'])
+    elif config['model_name'] == 'retinanet':
+        model = get_retinanet_model(config['num_classes'])
+    else:
+        print(f"Unknown model name: {config['model_name']}")
+        print("Please choose either 'frcnn' for Faster R-CNN or 'retinanet' for RetinaNet.")
+        return
     model.to(device)
     
     # Create optimizer and scheduler
