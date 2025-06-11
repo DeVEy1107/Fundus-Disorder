@@ -2,13 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-import json
 import time
-from datetime import datetime
-
-import cv2
-import numpy as np
-import matplotlib.pyplot as plt
 
 import torch
 import torch.nn as nn
@@ -18,6 +12,12 @@ from torch.utils.data import DataLoader
 from dataset import RetinalDataset, collate_fn
 from model import get_faster_rcnn_model, get_retinanet_model
 from optim import get_adam, get_step_lr_scheduler
+from torchvision.ops import box_iou
+
+from utils import save_checkpoint, load_checkpoint
+from evaluation import calculate_map
+from visual import plot_training_curves
+
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq=10):
     """
@@ -39,28 +39,20 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq=10)
     num_batches = len(data_loader)
     
     for batch_idx, (images, targets) in enumerate(data_loader):
-        # Move images to device
         images = [img.to(device) for img in images]
-        
-        # Move targets to device
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
         
-        # Zero gradients
         optimizer.zero_grad()
         
-        # Forward pass - Faster R-CNN returns loss dict during training
         loss_dict = model(images, targets)
         
-        # Sum all losses
         losses = sum(loss for loss in loss_dict.values())
         
-        # Backward pass
         losses.backward()
         optimizer.step()
         
         total_loss += losses.item()
         
-        # Print progress
         if batch_idx % print_freq == 0:
             print(f'Epoch [{epoch+1}] Batch [{batch_idx}/{num_batches}] '
                   f'Loss: {losses.item():.4f} '
@@ -68,6 +60,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq=10)
     
     avg_loss = total_loss / num_batches
     return avg_loss
+
 
 def evaluate(model, data_loader, device):
     """
@@ -79,113 +72,40 @@ def evaluate(model, data_loader, device):
         device: Device to run on
     
     Returns:
-        Average loss for validation set
+        Tuple of (average_loss, mAP)
     """
+    
     model.eval()
     total_loss = 0.0
     num_batches = len(data_loader)
     
+    all_predictions = []
+    all_targets = []
+    
     with torch.no_grad():
         for images, targets in data_loader:
-            # Move data to device
             images = [img.to(device) for img in images]
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
             
-            # Forward pass
             model.train()
             loss_dict = model(images, targets)
-            model.eval()
             losses = sum(loss for loss in loss_dict.values())
-            
             total_loss += losses.item()
+            
+            model.eval()
+            predictions = model(images)
+            
+            all_predictions.extend(predictions)
+            all_targets.extend(targets)
     
     avg_loss = total_loss / num_batches
-    return avg_loss
+    
+    mAP = calculate_map(all_predictions, all_targets, iou_threshold=0.5)
+    
+    return avg_loss, mAP
 
-def save_checkpoint(model, optimizer, scheduler, epoch, loss, save_dir, filename=None):
-    """
-    Save model checkpoint.
-    
-    Args:
-        model: The model to save
-        optimizer: Optimizer state
-        scheduler: Scheduler state
-        epoch: Current epoch
-        loss: Current loss
-        save_dir: Directory to save checkpoint
-        filename: Optional custom filename
-    """
-    os.makedirs(save_dir, exist_ok=True)
-    
-    if filename is None:
-        filename = f'checkpoint_epoch_{epoch+1}.pth'
-    
-    checkpoint = {
-        'epoch': epoch,
-        'model_state_dict': model.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict(),
-        'scheduler_state_dict': scheduler.state_dict(),
-        'loss': loss,
-        'timestamp': datetime.now().isoformat()
-    }
-    
-    filepath = os.path.join(save_dir, filename)
-    torch.save(checkpoint, filepath)
-    print(f'Checkpoint saved: {filepath}')
 
-def load_checkpoint(model, optimizer, scheduler, checkpoint_path):
-    """
-    Load model checkpoint.
-    
-    Args:
-        model: Model to load state into
-        optimizer: Optimizer to load state into
-        scheduler: Scheduler to load state into
-        checkpoint_path: Path to checkpoint file
-    
-    Returns:
-        Starting epoch number
-    """
-    checkpoint = torch.load(checkpoint_path)
-    model.load_state_dict(checkpoint['model_state_dict'])
-    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-    scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-    
-    epoch = checkpoint['epoch']
-    loss = checkpoint['loss']
-    
-    print(f'Checkpoint loaded: epoch {epoch+1}, loss {loss:.4f}')
-    return epoch + 1
 
-def plot_training_curves(train_losses, val_losses, save_dir):
-    """
-    Plot and save training curves.
-    
-    Args:
-        train_losses: List of training losses per epoch
-        val_losses: List of validation losses per epoch
-        save_dir: Directory to save plots
-    """
-    plt.figure(figsize=(10, 6))
-    
-    epochs = range(1, len(train_losses) + 1)
-    
-    plt.plot(epochs, train_losses, 'b-', label='Training Loss', linewidth=2)
-    plt.plot(epochs, val_losses, 'r-', label='Validation Loss', linewidth=2)
-    
-    plt.title('Training and Validation Loss Over Time')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    
-    # Save plot
-    os.makedirs(save_dir, exist_ok=True)
-    plot_path = os.path.join(save_dir, 'training_curves.png')
-    plt.savefig(plot_path, dpi=300, bbox_inches='tight')
-    plt.close()
-    
-    print(f'Training curves saved: {plot_path}')
 
 def main():
     # Configuration
@@ -279,19 +199,10 @@ def main():
         pin_memory=True if torch.cuda.is_available() else False
     )
     
-    test_loader = DataLoader(
-        test_dataset, 
-        batch_size=config['batch_size'], 
-        shuffle=False, 
-        num_workers=config['num_workers'],
-        collate_fn=collate_fn,
-        pin_memory=True if torch.cuda.is_available() else False
-    )
-    
     # Create model
     print(f"\nCreating Faster R-CNN model with {config['num_classes']} classes...")
-    # model = get_faster_rcnn_model(config['num_classes'])
-    model = get_retinanet_model(config['num_classes'])
+    model = get_faster_rcnn_model(config['num_classes'])
+    # model = get_retinanet_model(config['num_classes'])
     model.to(device)
     
     # Create optimizer and scheduler
@@ -327,7 +238,7 @@ def main():
         
         # Validation phase
         print("Validating...")
-        val_loss = evaluate(model, val_loader, device)
+        val_loss, mAP_results = evaluate(model, val_loader, device)
         
         # Update learning rate
         scheduler.step()
@@ -344,6 +255,7 @@ def main():
         print(f"\nEpoch {epoch+1} Summary:")
         print(f"  Train Loss: {train_loss:.4f}")
         print(f"  Val Loss: {val_loss:.4f}")
+        print(f"  mAP: {mAP_results:.4f}")
         print(f"  Learning Rate: {current_lr:.6f}")
         print(f"  Epoch Time: {epoch_time:.1f}s")
         
@@ -386,24 +298,6 @@ def main():
     print(f"Checkpoints saved in: {config['save_dir']}")
     print("=" * 60)
     
-    # Optional: Run inference on a few test samples
-    print("\nRunning inference on test samples...")
-    model.eval()
-    with torch.no_grad():
-        for i, (images, targets) in enumerate(test_loader):
-            if i >= 3:  # Just test on first 3 batches
-                break
-            
-            images = [img.to(device) for img in images]
-            predictions = model(images)
-            
-            print(f"Test batch {i+1}:")
-            for j, pred in enumerate(predictions):
-                num_detections = len(pred['boxes'])
-                print(f"  Image {j+1}: {num_detections} detections")
-                if num_detections > 0:
-                    max_score = torch.max(pred['scores']).item()
-                    print(f"    Max confidence: {max_score:.3f}")
 
 if __name__ == "__main__":
     main()
