@@ -62,7 +62,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq=10)
     avg_loss = total_loss / num_batches
     return avg_loss
 
-
+@torch.no_grad()
 def evaluate(model, data_loader, device):
     """
     Evaluate the model on validation set.
@@ -83,21 +83,20 @@ def evaluate(model, data_loader, device):
     all_predictions = []
     all_targets = []
     
-    with torch.no_grad():
-        for images, targets in data_loader:
-            images = [img.to(device) for img in images]
-            targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
-            
-            model.train()
-            loss_dict = model(images, targets)
-            losses = sum(loss for loss in loss_dict.values())
-            total_loss += losses.item()
-            
-            model.eval()
-            predictions = model(images)
-            
-            all_predictions.extend(predictions)
-            all_targets.extend(targets)
+    for images, targets in data_loader:
+        images = [img.to(device) for img in images]
+        targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+        
+        model.train()
+        loss_dict = model(images, targets)
+        losses = sum(loss for loss in loss_dict.values())
+        total_loss += losses.item()
+        
+        model.eval()
+        predictions = model(images)
+        
+        all_predictions.extend(predictions)
+        all_targets.extend(targets)
     
     avg_loss = total_loss / num_batches
     
