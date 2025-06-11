@@ -88,7 +88,7 @@ def calculate_ap_for_class(predictions, targets, iou_threshold):
     # Concatenate all predictions
     all_pred_boxes = torch.cat(all_pred_boxes, dim=0)
     all_pred_scores = torch.cat(all_pred_scores, dim=0)
-    all_pred_image_ids = torch.tensor(all_pred_image_ids)
+    all_pred_image_ids = torch.tensor(all_pred_image_ids, dtype=torch.long)
     
     # Sort predictions by confidence score
     sorted_indices = torch.argsort(all_pred_scores, descending=True)
