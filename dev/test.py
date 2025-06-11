@@ -77,7 +77,8 @@ class ModelEvaluator:
             json_file=test_json,
             img_dir=img_dir,
             load_masks=False,
-            img_size=img_size
+            img_size=img_size,
+            clahe=True # TODO: Set to True if you want to apply CLAHE
         )
         
         # Class names mapping (based on your label mapping)
@@ -118,7 +119,7 @@ class ModelEvaluator:
         print(f"Loading model from: {self.model_path}")
         
         # Create model
-        model = get_retinanet_model(num_classes=12)  # 3 classes + background
+        model = get_faster_rcnn_model(num_classes=12)  # 11 classes + background
         
         # Load checkpoint
         checkpoint = torch.load(self.model_path, map_location=self.device)
@@ -483,11 +484,11 @@ class ModelEvaluator:
 def main():
     # Configuration - Update these paths according to your setup
     config = {
-        'model_path': '../checkpoints/best_model.pth',  # Path to your trained model
-        'test_json': '../splits/test_fold_1.json',      # Test set JSON file
-        'img_dir': '../data/retinal-tiff/images',                    # Images directory
-        'output_dir': '../results',                     # Output directory
-        'confidence_threshold': 0.25,                    # Minimum confidence for detections
+        'model_path': './checkpoints/best_model.pth',  # Path to your trained model
+        'test_json': './splits/test_fold_1.json',      # Test set JSON file
+        'img_dir': './data/retinal-tiff/images',                    # Images directory
+        'output_dir': './results',                     # Output directory
+        'confidence_threshold': 0.5,                    # Minimum confidence for detections
         'nms_threshold': 0.5,                          # NMS threshold
         'num_vis_images': 40,                          # Number of images to visualize
         'img_size': (512, 512),                       # Image size for inference
