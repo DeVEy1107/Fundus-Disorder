@@ -6,8 +6,10 @@ from PIL import Image
 import numpy as np
 from typing import Dict, List, Tuple, Optional, Any
 import torchvision.transforms as transforms
-from pycocotools import mask as coco_mask
 import cv2
+
+from preprocess import apply_clahe  # Assuming this is defined in preprocess.py
+
 
 class RetinalDataset(Dataset):
     """
@@ -23,7 +25,9 @@ class RetinalDataset(Dataset):
                  transform: Optional[Any] = None,
                  target_transform: Optional[Any] = None,
                  load_masks: bool = True,
-                 img_size: Optional[Tuple[int, int]] = None):
+                 img_size: Optional[Tuple[int, int]] = None,
+                 augmentation: bool = False,
+                 clahe: bool = False):    
         """
         Initialize the COCO dataset.
         
@@ -40,6 +44,8 @@ class RetinalDataset(Dataset):
         self.target_transform = target_transform
         self.load_masks = load_masks
         self.img_size = img_size
+        self.augmentation = augmentation
+        self.clahe = clahe
         
         # Load COCO annotations
         with open(json_file, 'r') as f:
@@ -97,6 +103,11 @@ class RetinalDataset(Dataset):
             # Return a dummy image if loading fails
             image = Image.new('RGB', (224, 224), color=(0, 0, 0))
         
+        if self.clahe:
+            # Apply CLAHE if enabled
+            image = apply_clahe(np.asarray(image))
+            image = Image.fromarray(image)
+
         # Get original image size
         orig_w, orig_h = image.size
         
@@ -214,6 +225,12 @@ class RetinalDataset(Dataset):
         target['image_id'] = torch.tensor([img_id])
         
         # Apply transforms
+        # Apply color augmentation if enabled (only for color, not position)
+        if self.augmentation:
+            color_aug = transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.05)
+            image = color_aug(image)
+        
+        
         if self.transform is not None:
             image = self.transform(image)
         else:
@@ -386,37 +403,29 @@ def create_data_loaders(train_json: str,
 if __name__ == "__main__":
     # Example usage
     dataset = RetinalDataset(
-        json_file="splits/train_fold_1.json",
-        img_dir="path/to/images",
-        load_masks=True,
-        img_size=(512, 512)  # Optional: resize images to 512x512
+        json_file="splits/test_fold_1.json",
+        img_dir="data/retinal-tiff/images",
+        img_size=(512, 512),  # Optional: resize images to 512x512,
+        clahe=True,  # Apply CLAHE for contrast enhancement
     )
     
-    print(f"Dataset size: {len(dataset)}")
-    print(f"Categories: {dataset.get_category_names()}")
-    
-    # Test loading a sample
-    image, target = dataset[0]
-    print(f"Image shape: {image.shape}")
-    print(f"Number of objects: {len(target['labels'])}")
-    print(f"Labels: {target['labels']}")
-    print(f"Boxes shape: {target['boxes'].shape}")
-    print(f"Boxes: {target['boxes']}")
-    if 'masks' in target:
-        print(f"Masks shape: {target['masks'].shape}")
-    
-    # Create data loaders
-    train_loader, val_loader, test_loader = create_data_loaders(
-        train_json="splits/train_fold_1.json",
-        val_json="splits/val_fold_1.json", 
-        test_json="splits/test_fold_1.json",
-        img_dir="C:/Users/B093022035/Desktop/Fundus-Disorder/data/retinal-tiff/images",
-        batch_size=2,
-        img_size=(512, 512)
-    )
-    
-    # Test data loader
-    for images, targets in train_loader:
-        print(f"Batch images shape: {images.shape}")
-        print(f"Batch size: {len(targets)}")
-        break
+
+    # Show the first image and its annotations
+    for i in range(3):
+        image, target = dataset[i]
+        print(f"Image {i} size: {image.size()}")
+        print(f"Target for image {i}: {target}")
+        
+        # Convert tensor to PIL for visualization
+        image_pil = transforms.ToPILImage()(image)
+        image_pil.show()
+        
+        # Print bounding boxes and labels
+        if 'boxes' in target:
+            print(f"Boxes: {target['boxes']}")
+            print(f"Labels: {target['labels']}")
+        
+        if 'masks' in target:
+            print(f"Masks shape: {target['masks'].shape}")
+        else:
+            print("No masks available for this image.")
