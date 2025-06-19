@@ -243,8 +243,8 @@ def main():
 
         # Print class-wise APs
         print("  Class-wise APs:")
-        for class_id, ap in enumerate(class_aps):
-            print(f"    Class {class_id}: AP = {ap:.4f}")
+        for i, (class_name, ap) in enumerate(class_aps.items()):
+            print(f"    Class {i:02d} ({class_name}): AP = {ap:.4f}")
         
         # Save best model
         # if val_loss < best_val_loss:
