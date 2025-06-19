@@ -22,6 +22,8 @@ from PIL import Image, ImageDraw, ImageFont
 from dataset import RetinalDataset, collate_fn
 from model import get_faster_rcnn_model, get_retinanet_model
 # from loss import FasterRCNNLoss
+from evaluation import calculate_map
+
 
 class ModelEvaluator:
     """
@@ -160,6 +162,9 @@ class ModelEvaluator:
         
         # Store detailed results
         detailed_results = []
+
+        all_predictions = []
+        all_targets = []
         
         with torch.no_grad():
             for batch_idx, (images, targets) in enumerate(test_loader):
@@ -173,6 +178,9 @@ class ModelEvaluator:
                 pred = predictions[0]  # Single image batch
                 target = targets[0]
                 
+                all_predictions.append(pred)
+                all_targets.append(target)
+
                 # Filter predictions by confidence
                 keep_indices = pred['scores'] >= self.confidence_threshold
                 filtered_boxes = pred['boxes'][keep_indices]
@@ -222,6 +230,13 @@ class ModelEvaluator:
                 if (batch_idx + 1) % 10 == 0:
                     print(f"Processed {batch_idx + 1}/{len(test_loader)} images")
         
+        class_aps, mAP = calculate_map(all_predictions, all_targets, iou_threshold=0.5)
+        print(f"mAP: {mAP:.4f}")
+        print("Class-wise APs:")
+        for class_id, ap in class_aps.items():
+            class_name = self.class_names.get(class_id, f"Class_{class_id}")
+            print(f"  {class_name}: {ap:.4f}")
+
         # Calculate metrics
         avg_detections_per_image = total_detections / total_images if total_images > 0 else 0
         avg_confidence = np.mean(confidence_scores) if confidence_scores else 0
@@ -485,7 +500,7 @@ def main():
     # Configuration - Update these paths according to your setup
     config = {
         'model_path': './checkpoints/best_model.pth',  # Path to your trained model
-        'test_json': './splits/test_fold_1.json',      # Test set JSON file
+        'test_json': './data/retinal-jpg/test_fold_1.json',      # Test set JSON file
         'img_dir': './data/retinal-tiff/images',                    # Images directory
         'output_dir': './results',                     # Output directory
         'confidence_threshold': 0.5,                    # Minimum confidence for detections
