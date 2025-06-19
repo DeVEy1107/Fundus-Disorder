@@ -100,9 +100,9 @@ def evaluate(model, data_loader, device):
     
     avg_loss = total_loss / num_batches
     
-    mAP = calculate_map(all_predictions, all_targets, iou_threshold=0.5)
+    class_aps, mAP = calculate_map(all_predictions, all_targets, iou_threshold=0.5)
     
-    return avg_loss, mAP
+    return avg_loss, mAP, class_aps
 
 
 
@@ -220,7 +220,7 @@ def main():
         
         # Validation phase
         print("Validating...")
-        val_loss, mAP_results = evaluate(model, val_loader, device)
+        val_loss, mAP_results, class_aps = evaluate(model, val_loader, device)
         
         # Update learning rate
         scheduler.step()
@@ -240,6 +240,11 @@ def main():
         print(f"  mAP: {mAP_results:.4f}")
         print(f"  Learning Rate: {current_lr:.6f}")
         print(f"  Epoch Time: {epoch_time:.1f}s")
+
+        # Print class-wise APs
+        print("  Class-wise APs:")
+        for class_id, ap in enumerate(class_aps):
+            print(f"    Class {class_id}: AP = {ap:.4f}")
         
         # Save best model
         # if val_loss < best_val_loss:
