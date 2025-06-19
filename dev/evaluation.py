@@ -12,7 +12,8 @@ def calculate_map(predictions, targets, iou_threshold=0.5):
         iou_threshold: IoU threshold for positive detection
     
     Returns:
-        mAP score
+        class_aps: List of Average Precisions for each class  
+        mAP: Mean Average Precision across all classes
     """
     
     # conver predictions and targets to CPU tensors if they are not already
@@ -58,8 +59,9 @@ def calculate_map(predictions, targets, iou_threshold=0.5):
         ap = calculate_ap_for_class(class_predictions, class_targets, iou_threshold)
         class_aps.append(ap)
     
-    # Return mean of all class APs
-    return sum(class_aps) / len(class_aps) if class_aps else 0.0
+    mAP = sum(class_aps) / len(class_aps) if class_aps else 0.0
+
+    return class_aps, mAP
 
 
 def calculate_ap_for_class(predictions, targets, iou_threshold):
