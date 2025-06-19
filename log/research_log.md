@@ -137,3 +137,20 @@
 |    total featues    |   859  | 110  | 112  |
 | total images | 343 | 48 | 46 | 
 
+## 2025-06-19
+
+|          | AP@0.5 |
+|----------|--------|
+| Large Cupping | 0.1818 |
+| Lattice | 0.0531 |
+| Break | 0.3939 |
+| Other | 0.0046 |
+| Maculopathy | - |
+| Floater | 0.0303 |
+| Laser | 0.2748 |
+| Hemorrhage | 0.0070 |
+| Wrong Image | 0.4939 |
+| RD | - |
+| Pigment | 0.4876 |
+| **Average** | 0.2141 |
+
