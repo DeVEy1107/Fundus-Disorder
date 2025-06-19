@@ -2,6 +2,22 @@ import torch
 from torchvision.ops import box_iou
 
 
+CLASS_IDS_MAP = {
+    0: 'background',
+    1: "large cupping",
+    2: "lattice",
+    3: "break",
+    4: "other",
+    5: "maculopathy",
+    6: "floater",
+    7: "laser",
+    8: "hemorrhage",
+    9: "wrong image",
+    10: "RD",
+    11: "Pigment"
+}
+
+
 def calculate_map(predictions, targets, iou_threshold=0.5):
     """
     Calculate mean Average Precision (mAP) for object detection.
@@ -28,7 +44,7 @@ def calculate_map(predictions, targets, iou_threshold=0.5):
     if len(all_classes) == 0:
         return 0.0
     
-    class_aps = []
+    class_aps = {}
     
     for class_id in all_classes:
         # Collect all predictions and targets for this class
@@ -57,9 +73,9 @@ def calculate_map(predictions, targets, iou_threshold=0.5):
         
         # Calculate AP for this class
         ap = calculate_ap_for_class(class_predictions, class_targets, iou_threshold)
-        class_aps.append(ap)
+        class_aps[CLASS_IDS_MAP[class_id]] = ap
     
-    mAP = sum(class_aps) / len(class_aps) if class_aps else 0.0
+    mAP = sum(class_aps.values()) / len(class_aps) if class_aps else 0.0
 
     return class_aps, mAP
 
